@@ -41,8 +41,9 @@ IST_CLEANUP_TIME = time(hour=20, minute=30)     # 2:00 AM IST  = 20:30 UTC (prev
 
 # Plan configs
 PLANS = {
-    "hindu": {"name": "The Hindu", "price": "₹69/month"},
-    "toi": {"name": "Times of India", "price": "₹65/month"},
+    "hindu": {"name": "The Hindu", "price": "₹29/month"},
+    "toi": {"name": "Times of India", "price": "₹29/month"},
+    "ie": {"name": "Indian Express", "price": "₹29/month"},
 }
 
 # Logging
@@ -206,9 +207,10 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         f"👋 Welcome, {user.first_name}!\n\n"
         f"I deliver daily newspaper PDFs straight to your Telegram.\n\n"
         f"📋 *Available Plans:*\n"
-        f"  📰 *The Hindu* — ₹69/month  →  /buy_hindu\n"
-        f"  📰 *Times of India* — ₹65/month  →  /buy_toi\n\n"
-        f"After purchasing, use /paid_hindu or /paid_toi to notify us.\n"
+        f"  📰 *The Hindu* — ₹29/month  →  /buyhindu\n"
+        f"  📰 *Times of India* — ₹29/month  →  /buytoi\n"
+        f"  📰 *Indian Express* — ₹29/month  →  /buyie\n\n"
+        f"After purchasing, use /paidhindu, /paidtoi, or /paidie to notify us.\n"
         f"Check your subscription with /myplan.",
         parse_mode="Markdown",
     )
@@ -218,7 +220,7 @@ async def buy_hindu_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     """/buyhindu — Show The Hindu plan details and QR code."""
     qr_path = ASSETS_DIR / "qr.png"
     text = (
-        "📰 The Hindu — ₹69/month\n\n"
+        "📰 The Hindu — ₹29/month\n\n"
         "Scan the QR code below to pay via UPI.\n"
         "After payment, click /paidhindu to notify us!"
     )
@@ -235,7 +237,7 @@ async def buy_toi_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     """/buytoi — Show TOI plan details and QR code."""
     qr_path = ASSETS_DIR / "qr.png"
     text = (
-        "📰 Times of India — ₹65/month\n\n"
+        "📰 Times of India — ₹29/month\n\n"
         "Scan the QR code below to pay via UPI.\n"
         "After payment, click /paidtoi to notify us!"
     )
@@ -281,6 +283,28 @@ async def paid_hindu_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def paid_toi_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """/paid_toi — User confirms TOI payment."""
     await notify_admin_payment(update, context, "toi")
+
+
+async def buy_ie_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/buyie — Show Indian Express plan details and QR code."""
+    qr_path = ASSETS_DIR / "qr.png"
+    text = (
+        "📰 Indian Express — ₹29/month\n\n"
+        "Scan the QR code below to pay via UPI.\n"
+        "After payment, click /paidie to notify us!"
+    )
+    if qr_path.exists():
+        try:
+            await update.message.reply_photo(photo=qr_path, caption=text)
+        except Exception as e:
+            await update.message.reply_text(f"⚠️ Image error: {e}")
+    else:
+        await update.message.reply_text("⚠️ QR code not found in folder.")
+
+
+async def paid_ie_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/paidie — User confirms IE payment."""
+    await notify_admin_payment(update, context, "ie")
 
 
 async def myplan_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -390,6 +414,8 @@ app_api = FastAPI()
 
 @app_api.get("/")
 def health_check():
+    # This line prints to your Hugging Face logs every time Supabase pings it!
+    logger.info("⚡ Supabase Cron Ping Received! Server is awake.")
     return {"status": "ok", "message": "Telegram Bot is running"}
 
 def run_dummy_server():
@@ -445,8 +471,11 @@ def main() -> None:
     # Changed to match the stubborn welcome message exactly
     app.add_handler(CommandHandler("buyhindu", buy_hindu_command))
     app.add_handler(CommandHandler("buytoi", buy_toi_command))
+    app.add_handler(CommandHandler("buyie", buy_ie_command))  # <-- ADD THIS
+    
     app.add_handler(CommandHandler("paidhindu", paid_hindu_command))
     app.add_handler(CommandHandler("paidtoi", paid_toi_command))
+    app.add_handler(CommandHandler("paidie", paid_ie_command))  # <-- ADD THIS
     
     app.add_handler(CommandHandler("myplan", myplan_command))
 
